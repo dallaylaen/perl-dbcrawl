@@ -138,4 +138,38 @@ sub get_data {
 	return @ret;
 };
 
+sub ifsert_row {
+	my ($self, %opt) = @_;
+
+	# TODO check input
+	my $table = $opt{table};
+	my $key   = $opt{key};
+	my $data  = $opt{data};
+	my $id    = $data->{$key};
+
+	my $sth_sel = $self->{dbh}->prepare_cached(
+		"SELECT 1 FROM $table WHERE $key = ?");
+	my $rows = $sth_sel->execute($id);
+	$sth_sel->finish; # don't need data
+
+	# it's there - skip.
+	if ($rows >= 1) {
+		return;
+	};
+
+	my @fields = keys %$data;
+	my @values = map { $data->{$_} } @fields;
+	my $quest = join ",", ("?") x @fields;
+	my $field_list = join ",", @fields;
+
+	my $sth_ins = $self->{dbh}->prepare_cached(
+		"INSERT INTO $table ($field_list) VALUES ($quest);");
+
+	my $rows = $sth_ins->execute( @values );
+	# TODO $rows != 1 - bad!!!
+	$sth_ins->finish;
+
+	return "DELETE FROM $table WHERE $key = ".$self->{dbh}->quote($id).";";
+};
+
 1;

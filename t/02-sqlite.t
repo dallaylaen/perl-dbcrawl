@@ -34,13 +34,11 @@ foreach( 1..20 ) {
 };
 
 my $tf = My::TableFetch->new( dbh => $dbh );
-$tf->add_table ( table => "foo", key => "foo_id" );
-$tf->add_table ( table => "bar", key => "bar_id" );
-$tf->add_table ( table => "baz", key => "baz_id" );
+while (<DATA>) {
+	$tf->read_rule( $_ );
+};
 
-$tf->add_link( from_table => "foo", from_key => "bar_id", to_table => "bar" );
-$tf->add_link( from_table => "bar", from_key => "baz_id", to_table => "baz" );
-$tf->add_link( from_table => "baz", from_key => "foo_id", to_table => "foo" );
+# note explain $tf;
 
 $tf->do_fetch( { table => "foo", key => "foo_id", value => 30 } );
 
@@ -57,7 +55,7 @@ $tf->{dbh} = $dbh2;
 my @rollback = map { $tf->ifsert_row(%$_) } $tf->get_data;
 
 my $sth = $dbh2->prepare( "SELECT f.foo_id, b.bar_id, z.baz_id, z.foo_id AS foo2
-	FROM foo f JOIN bar b USING(bar_id) JOIN baz z USING(baz_id) 
+	FROM foo f JOIN bar b USING(bar_id) JOIN baz z USING(baz_id)
 	WHERE f.foo_id = ?" );
 
 $sth->execute(30);
@@ -82,3 +80,14 @@ foreach my $table (qw(foo bar baz)) {
 };
 
 done_testing;
+
+__DATA__
+#this is a comment
+
+KEY foo foo_id
+KEY bar bar_id
+KEY baz baz_id
+
+LINK foo:bar_id bar
+LINK bar:baz_id baz:baz_id
+LINK baz:foo_id foo

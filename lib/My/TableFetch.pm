@@ -12,8 +12,33 @@ sub new {
 		links      => {},
 		dbh        => $opt{dbh},
 	}, $class;
-	
+
 	return $self;
+};
+
+sub read_rule {
+	my ($self, $str, $source) = @_;
+
+	return if $str =~ /^\s*#/;
+	return unless $str =~ /^\s*(\w+)\s+(.*)$/;
+
+	$source = $source ? " in $source" : "";
+	my $keyword = $1;
+	my $data = $2;
+
+	if ( $keyword eq 'KEY' ) {
+		$data =~ /^(\w+)\s+(\w+)/
+			or die "Bad primary key (KEY) spec$source";
+
+		$self->add_table( table => $1, key => $2 );
+	} elsif ( $keyword eq 'LINK' ) {
+		$data =~ /^(\w+):(\w+)\s+(\w+)(?::(\w+))?/
+			or die "Bad foreign key (LINK) spec$source";
+		$self->add_link( from_table => $1, from_key => $2,
+			to_table => $3, to_key => $4 );
+	} else {
+		die "Unknown command $keyword$source";
+	};
 };
 
 sub add_table {
@@ -64,15 +89,13 @@ sub add_data {
 	};
 
 	$self->{uniq}{ $table }{ $id } = $row;
-	
+
 	my @ret;
 	my $links = $self->{links}{ $table } || [];
 	foreach (@$links) {
 		my ($from_key, $to_table, $to_key) = @$_;
 
 		my $id = $row->{$from_key};
-		warn "in links: $table:$from_key => $to_table:$to_key; id="
-			.($id//'(undef)');
 		defined $id or next;
 
 		# TODO check if already fetched
@@ -104,8 +127,6 @@ sub fetch_rows {
 		push @ret, { table => $opt{table}, data => $row };
 	};
 	$sth->finish;
-
-	warn "fetch_rows: got ".(scalar @ret)." rows";
 
 	return @ret;
 };
@@ -148,12 +169,13 @@ sub ifsert_row {
 	my $id    = $data->{$key};
 
 	my $sth_sel = $self->{dbh}->prepare_cached(
-		"SELECT 1 FROM $table WHERE $key = ?");
-	my $rows = $sth_sel->execute($id);
+		"SELECT count(*) FROM $table WHERE $key = ?");
+	$sth_sel->execute($id);
+	my ($sel_rows) = $sth_sel->fetchrow_array;
 	$sth_sel->finish; # don't need data
 
 	# it's there - skip.
-	if ($rows >= 1) {
+	if ($sel_rows >= 1) {
 		return;
 	};
 
@@ -165,7 +187,7 @@ sub ifsert_row {
 	my $sth_ins = $self->{dbh}->prepare_cached(
 		"INSERT INTO $table ($field_list) VALUES ($quest);");
 
-	my $rows = $sth_ins->execute( @values );
+	my $ins_rows = $sth_ins->execute( @values );
 	# TODO $rows != 1 - bad!!!
 	$sth_ins->finish;
 

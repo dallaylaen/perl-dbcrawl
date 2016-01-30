@@ -3,6 +3,8 @@ package My::TableFetch;
 use strict;
 use warnings;
 
+our $VERSION = 0.01;
+
 sub new {
 	my ($class, %opt) = @_;
 
@@ -19,6 +21,7 @@ sub new {
 sub read_rule {
 	my ($self, $str, $source) = @_;
 
+	die "Missing line in read_rule()" unless defined $str;
 	return if $str =~ /^\s*#/;
 	return unless $str =~ /^\s*(\w+)\s+(.*)$/;
 

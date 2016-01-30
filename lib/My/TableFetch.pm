@@ -3,7 +3,7 @@ package My::TableFetch;
 use strict;
 use warnings;
 
-our $VERSION = 0.01;
+our $VERSION = 0.0101;
 
 sub new {
 	my ($class, %opt) = @_;
@@ -16,6 +16,10 @@ sub new {
 	}, $class;
 
 	return $self;
+};
+
+sub dbh {
+	return $_[0]->{dbh};
 };
 
 sub read_rule {

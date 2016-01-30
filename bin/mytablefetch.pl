@@ -68,7 +68,42 @@ if ( $fname{out} ) {
 	};
 	close $out or die "Failed to sync $fname{out}: $!";
 } elsif ( $fname{in} ) {
-	die "TBD";
+	open ( my $fd_js, "<", $fname{in} )
+		or die "Cannot open(r) $fname{in}: $!";
+
+	my $fd_roll;
+	if (defined $fname{rollback}) {
+		open ($fd_roll, ">", $fname{rollback})
+			or die "Cannot open(w) $fname{rollback}: $!";
+	};
+
+	$tf->dbh->begin_work;
+
+	my $result = eval {
+		if ($fd_roll) {
+			print $fd_roll "BEGIN WORK;\n"
+				or die "Failed to write to $fname{rollback}: $!";
+		};
+		while (<$fd_js>) {
+			chomp;
+			my $data = decode_json($_);
+			my $rb = $tf->ifsert_row(%$data);
+			if ($fd_roll) {
+				print $fd_roll "$rb\n"
+					or die "Failed to write to $fname{rollback}: $!";
+			};
+		};
+		if ($fd_roll) {
+			print $fd_roll "COMMIT;\n"
+				or die "Failed to write to $fname{rollback}: $!";
+			close $fd_roll
+				or die "Failed to close $fname{rollback}: $!";
+		};
+	};
+	$result ? $tf->dbh->commit : $tf->dbh->rollback;
+	if (!$result) {
+		die $@ || "Error during inserts, rolling back";
+	};
 };
 
 
@@ -109,3 +144,4 @@ sub read_rules {
 
 	return $tf;
 };
+

@@ -33,8 +33,16 @@ GetOptions (
 
 sub usage {
 	print <<"USAGE";
-Usage: $0 [options]
-To be continued...
+Save: $0 [-d <database>] -s <filename> -f <rules> <table:field=value> ...
+Save <database> records matching criteria with all dependencies as determined
+by <rules>. Records are saved as JSON:
+{ table => "table", key => "key", data => {...} }
+Load: $0 [-d <database>] -l <filename> [-r rollback]
+Load records into <database>, optionally creating rollback file.
+Existing records are preserved and never written to rollback file.
+<database> = <user>:<password>@<host>[:port]/<schema>
+Currently, only mysql is supported.
+$0 --help - this message
 USAGE
 	exit 0;
 };

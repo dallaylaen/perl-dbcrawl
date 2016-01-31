@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+our $VERSION = 0.01;
+
 use DBI;
 use JSON::XS;
 use Getopt::Long;
@@ -33,11 +35,12 @@ GetOptions (
 
 sub usage {
 	print <<"USAGE";
-Save: $0 [-d <database>] -s <filename> -f <rules> <table:field=value> ...
+MySQL slicer v.$VERSION. Usage:
+$0 [-d <database>] -s <filename> -f <rules> <table:field=value> ...
 Save <database> records matching criteria with all dependencies as determined
 by <rules>. Records are saved as JSON:
 { table => "table", key => "key", data => {...} }
-Load: $0 [-d <database>] -l <filename> [-r rollback]
+$0 [-d <database>] -l <filename> [-r rollback]
 Load records into <database>, optionally creating rollback file.
 Existing records are preserved and never written to rollback file.
 <database> = <user>:<password>@<host>[:port]/<schema>
@@ -47,12 +50,13 @@ USAGE
 	exit 0;
 };
 
-$fname{out} xor $fname{in}
-	or die "Exactly one of -l or -s must be specified";
+$fname{out} and $fname{in}
+	and die "Only one of -l or -s must be specified";
 
 my $dbparams = str2dbi( $database );
 # TODO read password if needed
-my $tf = My::TableFetch->new(dbh => db_connect($dbparams));
+my $dbh = db_connect($dbparams);
+my $tf = My::TableFetch->new(dbh => $dbh);
 
 if ( $fname{out} ) {
 	# TODO - = STDOUT
@@ -112,8 +116,10 @@ if ( $fname{out} ) {
 	if (!$result) {
 		die $@ || "Error during inserts, rolling back";
 	};
+} else {
+	print "Connected to DB successfully.\n";
+	exit;
 };
-
 
 sub str2dbi {
 	my $str = shift;
@@ -152,4 +158,5 @@ sub read_rules {
 
 	return $tf;
 };
+
 

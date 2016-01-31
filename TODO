@@ -1,0 +1,8 @@
+
+SINCE	IMPROVEMENT
+0.01	Table structure guessing
+0.01	Record ID & interdependencies
+0.01	LIKE clause for initial select
+0.01	Switchable links (don't fetch via this link by default)
+0.01	Link depth (e.g. for lj friends fetch) HOWTO?
+0.01	Table data postprocessing (eval perl?)
